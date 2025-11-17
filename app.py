@@ -23,14 +23,17 @@ st.set_page_config(layout="wide", page_title="YouTube Engagement Dashboard")
 # ============================================================
 # ZIP + CSV LOADER
 # ============================================================
+# ============================================================
+# ZIP + CSV LOADER (FIXED — NO SYNTAX ERRORS)
+# ============================================================
 def load_file(uploaded_file):
     """Load CSV or extract CSV from ZIP."""
     if uploaded_file is None:
         return None
 
+    # Case: Uploaded CSV
     filename = uploaded_file.name.lower() if hasattr(uploaded_file, "name") else "repo_zip"
 
-    # CASE 1 → CSV
     if filename.endswith(".csv"):
         try:
             return pd.read_csv(uploaded_file, low_memory=True, on_bad_lines="skip")
@@ -38,28 +41,26 @@ def load_file(uploaded_file):
             st.error(f"❌ Could not read CSV: {e}")
             return None
 
-    # CASE 2 → ZIP
-    if filename.endswith(".zip") or True:
-        try:
-            z = zipfile.ZipFile(uploaded_file)
-            files = z.namelist()
+    # Case: Uploaded ZIP or repo ZIP
+    try:
+        z = zipfile.ZipFile(uploaded_file)
+        inside_files = z.namelist()
 
-            csv_files = [f for f in files if f.lower().endswith(".csv")]
+        csv_files = [f for f in inside_files if f.lower().endswith(".csv")]
+        if len(csv_files) == 0:
+            st.error("❌ ZIP contains no CSV.")
+            return None
 
-            if len(csv_files) == 0:
-                st.error("❌ No CSV file found inside ZIP.")
-                return None
+        csv_name = csv_files[0]
+        st.success(f"📄 Loaded CSV from ZIP: {csv_name}")
 
-            csv_name = csv_files[0]
-            st.success(f"📄 Loaded CSV from ZIP: {csv_name}")
+        with z.open(csv_name) as f:
+            return pd.read_csv(f, low_memory=True, on_bad_lines="skip")
 
-            with z.open(csv_name) as f:
-                return pd.read_csv(f, low_memory=True, on_bad_lines="skip")
+    except Exception as e:
+        st.error(f"❌ ZIP extract error: {e}")
+        return None
 
-        except:
-            pass
-
-    return None
 
 
 # ============================================================
